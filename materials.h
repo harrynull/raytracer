@@ -26,6 +26,7 @@ static float schlick(float cosine, float ref_idx) {
 
 class Material {
 public:
+    virtual ~Material() {}
     virtual bool scatter(
         const Ray& r_in, const HitInfo& rec, Vec3& attenuation,
         Ray& scattered) const = 0;
@@ -73,7 +74,7 @@ public:
         Vec3 outward_normal;
         Vec3 reflected = reflect(r_in.direction(), rec.normal);
         float ni_over_nt;
-        attenuation = Vec3(1.0, 1.0, 0.0);
+        attenuation = Vec3(1.0, 1.0, 1.0);
         Vec3 refracted;
 
         float reflect_prob;
