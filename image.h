@@ -35,6 +35,7 @@ struct Image
         return pixels[y * width + x];
     }
     Pixel* getBuffer() { return pixels; }
+    void clear() noexcept { memset(pixels, 0, sizeof(Pixel) * width * height); }
 
     Pixel* pixels;
     size_t width, height;

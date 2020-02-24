@@ -15,6 +15,17 @@ public:
     {
         for (auto& t : threads) t.join();
     }
+    void stop()
+    {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            while (!tasks.empty()) tasks.pop();
+        }
+        for (auto& t : threads)t.join();
+        threads.clear();
+        counter = 0;
+    }
+
     void start(size_t thread_num)
     {
         while (thread_num--) threads.emplace_back([this]() {worker(); });
@@ -31,6 +42,11 @@ public:
     bool finished() const noexcept
     {
         return tasks.empty();
+    }
+
+    void wait() const noexcept
+    {
+        while (!finished()) std::this_thread::yield();
     }
 
 private:

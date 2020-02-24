@@ -18,9 +18,9 @@ using namespace std;
 
 ObjectGroup scene;
 constexpr int MaxDepth = 50;
-constexpr int Width = 1000;
-constexpr int Height = 500;
-constexpr int SampleNumber = 100;
+constexpr int Width = 1900;
+constexpr int Height = 1000;
+int SampleNumber = 500;
 constexpr int TaskBlockSize = 1;
 
 class MainProgram
@@ -114,15 +114,14 @@ private:
         }
     }
 
-    void init()
+    void startRaytracing()
     {
-        auto lambertian1 = make_shared<Lambertian>(Vec3(0.8, 0.3, 0.3));
-        auto lambertian2 = make_shared<Lambertian>(Vec3(0.8, 0.8, 0.0));
-        auto metal1 = make_shared<Metal>(Vec3(0.8, 0.6, 0.2), 0.0);
-        auto dielectric = make_shared<Dielectric>(1.5);
-        group = generateRandomScene();
-        for (int j = img.height; j >= 0; j-= TaskBlockSize) {
-            for (int i = 0; i < img.width; i+= TaskBlockSize) {
+        cout << "Starting new ray tracing... from "<<camera.lookfrom << " to " <<camera.lookat << " with SampleNumber = " << SampleNumber << endl;
+        tp.stop();
+        img.clear();
+
+        for (int j = img.height; j >= 0; j -= TaskBlockSize) {
+            for (int i = 0; i < img.width; i += TaskBlockSize) {
                 auto task = [this, i, j]() {
                     renderTask(i, min(i + TaskBlockSize, int(img.width)),
                         max(j - TaskBlockSize, 0), j);
@@ -134,6 +133,16 @@ private:
         tp.start(std::thread::hardware_concurrency() - 1);
     }
 
+    void init()
+    {
+        auto lambertian1 = make_shared<Lambertian>(Vec3(0.8, 0.3, 0.3));
+        auto lambertian2 = make_shared<Lambertian>(Vec3(0.8, 0.8, 0.0));
+        auto metal1 = make_shared<Metal>(Vec3(0.8, 0.6, 0.2), 0.0);
+        auto dielectric = make_shared<Dielectric>(1.5);
+        group = generateRandomScene();
+        startRaytracing();
+    }
+
     void render()
     {
         glClearColor(0, 0, 0, 1.0f);
@@ -143,26 +152,61 @@ private:
         glDrawPixels(Width, Height, GL_RGB, GL_UNSIGNED_BYTE, img.getBuffer());
 
         glFlush();
-      
-        if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_S] == SDL_PRESSED) {
+
+        auto keys = SDL_GetKeyboardState(nullptr);
+        if (keys[SDL_SCANCODE_S]) {
             writeImage(ofstream("img.ppm"), img);
             cout << "Image saved" << endl;;
         }
-        /*ProgressBar pb(img.height * img.width, 80);
-        while (!tp.finished())
-        {
-            pb.flush(tp.getCounter());
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }*/
-        //  
+        auto speed = 0.05f;
+        if (keys[SDL_SCANCODE_LEFT]) {
+            camera.lookat += Vec3(speed,0,0);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_RIGHT]) {
+            camera.lookat += Vec3(-speed, 0, 0);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_UP]) {
+            camera.lookat += Vec3(0, speed, 0);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_DOWN]) {
+            camera.lookat += Vec3(0, -speed, 0);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_W]) {
+            camera.lookfrom += speed * unit_vector(camera.lookat - camera.lookfrom);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_S]) {
+            camera.lookfrom -= speed * unit_vector(camera.lookat - camera.lookfrom);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_EQUALS]) {
+            SampleNumber += 10;
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_MINUS]) {
+            SampleNumber -= 10;
+            SampleNumber = max(1, SampleNumber);
+            startRaytracing();
+        }
+        pb.flush(tp.getCounter());
     }
 
     Window w;
     ObjectGroup group;
     ThreadPool tp;
     Image img{ Width, Height };
-    Camera camera{ {-2,2,1}, {0,0,-1}, {0,1,0}, 90, float(img.width) / float(img.height),
-    0.1, (Vec3{-2,2,1} -Vec3{0,0,-1}).length() };
+    Camera camera{ {2,0.9,-2.5}, {1.6,0.9,-1}, {0, 1, 0}, 90, float(img.width) / float(img.height), 0.1 };
+    ProgressBar pb{ Width * Height, 80 };
 };
 
 

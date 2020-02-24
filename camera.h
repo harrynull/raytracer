@@ -8,7 +8,13 @@ constexpr double PI = 3.141592653589793238463;
 class Camera {
 public:
     Camera(Vec3 lookfrom, Vec3 lookat, Vec3 vup, float vfov, float aspect,
-        float aperture, float focus_dist) {
+        float aperture) :  lookfrom(lookfrom), lookat(lookat), vup(vup), vfov(vfov), aspect(aspect), aperture(aperture)
+    {
+        calculate();
+    }
+
+    void calculate() {
+        auto focus_dist = (lookat - lookfrom).length();
         lens_radius = aperture / 2;
         float theta = vfov * PI / 180;
         float half_height = tan(theta / 2);
@@ -33,6 +39,9 @@ public:
             - origin - offset);
     }
 
+    Vec3 lookfrom, lookat, vup;
+    float vfov, aspect, aperture;
+private:
     Vec3 origin;
     Vec3 lower_left_corner;
     Vec3 horizontal;
