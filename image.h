@@ -34,6 +34,7 @@ struct Image
             throw std::invalid_argument("bad position");
         return pixels[y * width + x];
     }
+    Pixel* getBuffer() { return pixels; }
 
     Pixel* pixels;
     size_t width, height;

@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\shaders">
+      <UniqueIdentifier>{a6ca5098-ea53-4777-825b-22a769c453da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="raytracer.cpp">
@@ -48,6 +51,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="threadpool.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="window.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="shader.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
