@@ -9,6 +9,7 @@ public:
     void flush(int val)
     {
         double percentage = double(val) / max;
+        percentage = std::min(1.0,std::max(percentage, 0.0));
         int p1000 = percentage * 1000;
         int length_nempty = int(round(percentage * width));
         if (p1000 == last_reported) return;

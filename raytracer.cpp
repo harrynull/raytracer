@@ -18,10 +18,10 @@ using namespace std;
 
 ObjectGroup scene;
 constexpr int MaxDepth = 50;
-constexpr int Width = 1900;
-constexpr int Height = 1000;
-int SampleNumber = 500;
-constexpr int TaskBlockSize = 1;
+constexpr int Width = 800;
+constexpr int Height = 500;
+int SampleNumber = 10;
+constexpr int TaskBlockSize = 100;
 
 class MainProgram
 {
@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    static ObjectGroup generateRandomScene() {
+    static std::shared_ptr<Object> generateRandomScene() {
         int n = 500;
         ObjectGroup list;
 
@@ -45,8 +45,14 @@ private:
         group.addObject<Sphere>(Vec3{ 0, -100.5, -1 }, 100, lambertian2);
         group.addObject<Sphere>(Vec3{ 1, 0, -1 }, .5, metal1);
         group.addObject<Sphere>(Vec3{ -1, 0, -1 }, .5, dielectric);*/
+        auto l = std::make_shared<Lambertian>(
+            std::make_shared<CheckerTexture>(
+                std::make_shared<ConstantTexture>(Vec3{ 0.2, 0.3, 0.1 }),
+                std::make_shared<ConstantTexture>(Vec3{ 0.9, 0.9, 0.9 })
+            )
+        );
+        list.addObject<Sphere>(Vec3(0, -1000, 0), 1000,l);
 
-        list.addObject<Sphere>(Vec3(0, -1000, 0), 1000, make_shared<Lambertian>(Vec3(0.5, 0.5, 0.5)));
         int i = 1;
         for (int a = -11; a < 11; a++) {
             for (int b = -11; b < 11; b++) {
@@ -54,9 +60,10 @@ private:
                 Vec3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double());
                 if ((center - Vec3(4, 0.2, 0)).length() > 0.9) {
                     if (choose_mat < 0.8) {  // diffuse
-                        list.addObject<Sphere>(center, 0.2, make_shared<Lambertian>(Vec3(random_double() * random_double(),
+                        list.addObject<Sphere>(center, 0.2, make_shared<Lambertian>(std::make_shared<ConstantTexture>(
+                            Vec3( random_double() * random_double(),
                             random_double() * random_double(),
-                            random_double() * random_double())));
+                            random_double() * random_double() ))));
                     }
                     else if (choose_mat < 0.95) { // metal
                         list.addObject<Sphere>(center, 0.2, make_shared<Metal>(Vec3(0.5 * (1 + random_double()),
@@ -72,10 +79,13 @@ private:
         }
 
         list.addObject<Sphere>(Vec3{ 0, 1, 0 }, 1.0, make_shared<Dielectric>(1.5));
-        list.addObject<Sphere>(Vec3{ -4, 1, 0 }, 1.0, make_shared<Lambertian>(Vec3{ 0.4, 0.2, 0.1 }));
+        list.addObject<Sphere>(Vec3{ -4, 1, 0 }, 1.0, make_shared<Lambertian>(std::make_shared<ConstantTexture>(Vec3{ 0.4, 0.2, 0.1 })));
         list.addObject<Sphere>(Vec3{ 4, 1, 0 }, 1.0, make_shared<Metal>(Vec3{ 0.7, 0.6, 0.5 }, 0.0));
 
-        return list;
+        list.addObject<XYRect>(0, 2, 0, 1, 2,
+            make_shared<DiffuseLight>(make_shared<ConstantTexture>(Vec3(0, 1, 1))));
+
+        return list.to_bvh_node();
     }
     static Vec3 color(const Ray& r, Object& world, int depth) {
         if (auto info = world.hit(r, 0.001, std::numeric_limits<float>::max());
@@ -83,10 +93,12 @@ private:
 
             Ray scattered;
             Vec3 attenuation;
+            Vec3 emitted = info->material->emitted(0, 0, info->p);
+
             if (depth < MaxDepth && info->material->scatter(r, *info, attenuation, scattered)) {
-                return attenuation * color(scattered, world, depth + 1);
+                return  emitted + attenuation * color(scattered, world, depth + 1);
             }
-            return { 0,0,0 };
+            return emitted;
 
         }
         float t = 0.5 * (unit_vector(r.direction()).y() + 1.0);
@@ -104,7 +116,7 @@ private:
                 for (int s = 0; s < SampleNumber; s++) {
                     float u = float(i + random_double()) / float(img.width);
                     float v = float(j + random_double()) / float(img.height);
-                    col += color(camera.getRay(u, v), group, 0);
+                    col += color(camera.getRay(u, v), *group, 0);
                 }
                 col /= SampleNumber;
                 col = Vec3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
@@ -118,7 +130,7 @@ private:
     {
         cout << "Starting new ray tracing... from "<<camera.lookfrom << " to " <<camera.lookat << " with SampleNumber = " << SampleNumber << endl;
         tp.stop();
-        img.clear();
+        //img.clear();
 
         for (int j = img.height; j >= 0; j -= TaskBlockSize) {
             for (int i = 0; i < img.width; i += TaskBlockSize) {
@@ -135,8 +147,8 @@ private:
 
     void init()
     {
-        auto lambertian1 = make_shared<Lambertian>(Vec3(0.8, 0.3, 0.3));
-        auto lambertian2 = make_shared<Lambertian>(Vec3(0.8, 0.8, 0.0));
+        auto lambertian1 = make_shared<Lambertian>(std::make_shared<ConstantTexture>(Vec3{ 0.8, 0.3, 0.3 }));
+        auto lambertian2 = make_shared<Lambertian>(std::make_shared<ConstantTexture>(Vec3{ 0.8, 0.8, 0.0 }));
         auto metal1 = make_shared<Metal>(Vec3(0.8, 0.6, 0.2), 0.0);
         auto dielectric = make_shared<Dielectric>(1.5);
         group = generateRandomScene();
@@ -154,38 +166,48 @@ private:
         glFlush();
 
         auto keys = SDL_GetKeyboardState(nullptr);
-        if (keys[SDL_SCANCODE_S]) {
+        if (keys[SDL_SCANCODE_Q]) {
             writeImage(ofstream("img.ppm"), img);
             cout << "Image saved" << endl;;
         }
         auto speed = 0.05f;
         if (keys[SDL_SCANCODE_LEFT]) {
-            camera.lookat += Vec3(speed,0,0);
+            camera.lookat += Vec3(-speed,0,0);
             camera.calculate();
             startRaytracing();
         }
         if (keys[SDL_SCANCODE_RIGHT]) {
-            camera.lookat += Vec3(-speed, 0, 0);
+            camera.lookat += Vec3(speed, 0, 0);
             camera.calculate();
             startRaytracing();
         }
         if (keys[SDL_SCANCODE_UP]) {
-            camera.lookat += Vec3(0, speed, 0);
-            camera.calculate();
-            startRaytracing();
-        }
-        if (keys[SDL_SCANCODE_DOWN]) {
             camera.lookat += Vec3(0, -speed, 0);
             camera.calculate();
             startRaytracing();
         }
+        if (keys[SDL_SCANCODE_DOWN]) {
+            camera.lookat += Vec3(0, speed, 0);
+            camera.calculate();
+            startRaytracing();
+        }
         if (keys[SDL_SCANCODE_W]) {
-            camera.lookfrom += speed * unit_vector(camera.lookat - camera.lookfrom);
+            camera.lookfrom -= speed * unit_vector(camera.lookat);
             camera.calculate();
             startRaytracing();
         }
         if (keys[SDL_SCANCODE_S]) {
-            camera.lookfrom -= speed * unit_vector(camera.lookat - camera.lookfrom);
+            camera.lookfrom += speed * unit_vector(camera.lookat);
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_O]) {
+            camera.focus_dist--;
+            camera.calculate();
+            startRaytracing();
+        }
+        if (keys[SDL_SCANCODE_P]) {
+            camera.focus_dist++;
             camera.calculate();
             startRaytracing();
         }
@@ -202,10 +224,10 @@ private:
     }
 
     Window w;
-    ObjectGroup group;
+    std::shared_ptr<Object> group;
     ThreadPool tp;
     Image img{ Width, Height };
-    Camera camera{ {2,0.9,-2.5}, {1.6,0.9,-1}, {0, 1, 0}, 90, float(img.width) / float(img.height), 0.1 };
+    Camera camera{ {2,0.9,-2.5}, {1.6,0.9,-1}, {0, 1, 0}, 90, float(img.width) / float(img.height), 0.1, 5 };
     ProgressBar pb{ Width * Height, 80 };
 };
 

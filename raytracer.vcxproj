@@ -158,6 +158,7 @@
     <ClCompile Include="raytracer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="aabb.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="hit_info.h" />
     <ClInclude Include="image.h" />
@@ -167,6 +168,7 @@
     <ClInclude Include="random.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="texture.h" />
     <ClInclude Include="threadpool.h" />
     <ClInclude Include="vec3.h" />
     <ClInclude Include="window.h" />

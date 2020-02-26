@@ -2,6 +2,7 @@
 #include "ray.h"
 #include "hit_info.h"
 #include "vec3.h"
+#include "texture.h"
 
 static Vec3 reflect(const Vec3& v, const Vec3& n) {
     return v - 2 * dot(v, n) * n;
@@ -30,22 +31,25 @@ public:
     virtual bool scatter(
         const Ray& r_in, const HitInfo& rec, Vec3& attenuation,
         Ray& scattered) const = 0;
+    virtual Vec3 emitted(float u, float v, const Vec3& p) const {
+        return Vec3(0, 0, 0);
+    }
 };
 
 class Lambertian : public Material {
 public:
-    Lambertian(const Vec3& a) : albedo(a) {}
+    Lambertian(std::shared_ptr<Texture> texture) : texture(std::move(texture)) {}
 
     bool scatter(const Ray& r_in, const HitInfo& rec,
         Vec3& attenuation, Ray& scattered) const override
     {
         Vec3 target = rec.p + rec.normal + random_in_unit_sphere();
         scattered = Ray(rec.p, target - rec.p);
-        attenuation = albedo;
+        attenuation = texture->value(0, 0, rec.p);
         return true;
     }
 
-    Vec3 albedo;
+    std::shared_ptr<Texture> texture;
 };
 
 class Metal : public Material {
@@ -110,4 +114,17 @@ public:
     }
 
     float ref_idx;
+};
+
+class DiffuseLight : public Material {
+public:
+    DiffuseLight(std::shared_ptr<Texture> texture) : emit(texture) {}
+    bool scatter(const Ray& r_in, const HitInfo& rec,
+        Vec3& attenuation, Ray& scattered) const override {
+        return false;
+    }
+    Vec3 emitted(float u, float v, const Vec3& p) const override {
+        return emit->value(u, v, p);
+    }
+    std::shared_ptr<Texture> emit;
 };

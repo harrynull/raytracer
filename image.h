@@ -44,7 +44,7 @@ struct Image
 inline void writeImage(std::ofstream&& file, const Image& image)
 {
     file << "P3\n" << image.width << " " << image.height << "\n255\n";
-    for (int j = image.height - 1; j >= 0; j--)
+    for (int j = int(image.height - 1); j >= 0; j--)
         for (int i = 0; i < image.width; i++)
         {
             auto& pixel = image.getPixel(i, j);
