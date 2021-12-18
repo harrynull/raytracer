@@ -1,6 +1,5 @@
 .vs/
 x64/
 Debug/
-*.png
 *.ppm
 *.vcxproj.user
